@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from inventory import inventory
+from api import search_product_by_barcode
 
 app = Flask(__name__)
 
@@ -74,6 +75,38 @@ def delete_item(item_id):
             return jsonify({"message": "Item deleted successfully"}), 200
 
     return jsonify({"error": "Item not found"}), 404
+
+@app.route("/inventory/search/<barcode>", methods=["GET"])
+def search_inventory_product(barcode):
+    product = search_product_by_barcode(barcode)
+
+    if product is None:
+        return jsonify({"error": "Product not found"}), 404
+
+    return jsonify(product), 200
+
+@app.route("/inventory/import/<barcode>", methods=["POST"])
+def import_product(barcode):
+    product = search_product_by_barcode(barcode)
+
+    if product is None:
+        return jsonify({"error": "Product not found"}), 404
+
+    new_id = max([item["id"] for item in inventory], default=0) + 1
+
+    new_item = {
+        "id": new_id,
+        "product_name": product["product_name"],
+        "brands": product["brands"],
+        "barcode": product["barcode"],
+        "ingredients_text": product["ingredients_text"],
+        "price": 0,
+        "stock": 0
+    }
+
+    inventory.append(new_item)
+
+    return jsonify(new_item), 201
 
 if __name__ == "__main__":
     app.run(debug=True)
