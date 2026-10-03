@@ -1,0 +1,3 @@
+Flask -- REST api
+requests -- communicating with open foodfacts
+pytest -- testing
