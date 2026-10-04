@@ -306,10 +306,7 @@ def main():
                 input("\nPress Enter to return to the menu...")
                 continue
 
-            new_id = max([item["id"] for item in inventory], default=0) + 1
-
             new_item = {
-                "id": new_id,
                 "product_name": product["product_name"],
                 "brands": product["brands"],
                 "barcode": product["barcode"],
@@ -318,16 +315,26 @@ def main():
                 "stock": stock
             }
 
-            inventory.append(new_item)
+            response = requests.post(
+                "http://127.0.0.1:5000/inventory",
+                json=new_item
+            )
 
-            print("\nProduct imported successfully!")
-            print(f"ID: {new_id}")
-            print(f"Product: {new_item['product_name']}")
-            print(f"Brand: {new_item['brands']}")
-            print(f"Price: {new_item['price']}")
-            print(f"Stock: {new_item['stock']}")
+            if response.status_code == 201:
+                item = response.json()
 
-            
+                print("\nProduct imported successfully!")
+                print(f"ID: {item['id']}")
+                print(f"Product: {item['product_name']}")
+                print(f"Brand: {item['brands']}")
+                print(f"Price: {item['price']}")
+                print(f"Stock: {item['stock']}")
+
+            else:
+                print("\nUnable to import product.")
+                print(f"Status code: {response.status_code}")
+                print(f"Response: {response.text}")
+
             input("\nPress Enter to return to the menu...")
 
         elif choice == "8":
