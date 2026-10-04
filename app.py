@@ -12,8 +12,8 @@ def get_inventory():
 def get_item(item_id):
     for item in inventory:
         if item["id"] == item_id:
-            return jsonify(item_id)
-    return jsonify({"error message: Item not found"}), 404
+            return jsonify(item), 200
+    return jsonify({"error message": "Item not found"}), 404
 
 @app.route("/inventory", methods = ["POST"])
 def add_item():
@@ -21,7 +21,7 @@ def add_item():
     product_name = data.get("product_name", "").strip()
     brands = data.get("brands", "").strip()
     barcode = data.get("barcode", "").strip()
-    ingredients_text = ("ingredients_text", "").strip()
+    ingredients_text = data.get("ingredients_text", "").strip()
     price = data.get("price")
     stock = data.get("stock")
 

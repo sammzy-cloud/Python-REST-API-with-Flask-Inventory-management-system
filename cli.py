@@ -1,3 +1,4 @@
+import requests
 from inventory import inventory
 from api import search_product_by_barcode
 
@@ -35,68 +36,94 @@ def main():
                 input("\nPress Enter to return to the menu...")
                 continue
 
-            new_id = max([item["id"] for item in inventory], default=0) + 1
-
             new_item = {
-             "id": new_id,
-             "product_name": product_name,
-             "brands": brands,
-             "barcode": barcode,
-             "ingredients_text": ingredients_text,
-             "price": price,
-             "stock": stock
+                "product_name": product_name,
+                "brands": brands,
+                "barcode": barcode,
+                "ingredients_text": ingredients_text,
+                "price": price,
+                "stock": stock
             }
 
-            inventory.append(new_item)
+            response = requests.post(
+                "http://127.0.0.1:5000/inventory",
+                json=new_item
+            )
 
-            print("\nItem added successfully!")
-            print(f"New item ID: {new_id}")
+            if response.status_code in (200, 201):
+                item = response.json()
+
+                print("\nItem added successfully!")
+                print(f"ID: {item['id']}")
+                print(f"Product: {item['product_name']}")
+                print(f"Price: {item['price']}")
+                print(f"Stock: {item['stock']}")
+
+            else:
+                print("Unable to add item.")
+                print(response.json())
 
             input("\nPress Enter to return to the menu...")
 
         elif choice == "2":
-            if not inventory:
-                print("Inventory is empty.")
-            else:
-                print("\n===== INVENTORY =====")
+            response = requests.get("http://127.0.0.1:5000/inventory")
 
-                for item in inventory:
-                    print(f"ID: {item['id']}")
-                    print(f"Product: {item['product_name']}")
-                    print(f"Brand: {item['brands']}")
-                    print(f"Barcode: {item['barcode']}")
-                    print(f"Price: {item['price']}")
-                    print(f"Stock: {item['stock']}")
-                    print("-" * 30)
+            if response.status_code == 200:
+                items = response.json()
+
+                if not items:
+                    print("Inventory is empty.")
+                else:
+                    print("\n===== INVENTORY =====")
+
+                    for item in items:
+                        print(f"ID: {item['id']}")
+                        print(f"Product: {item['product_name']}")
+                        print(f"Brand: {item['brands']}")
+                        print(f"Barcode: {item['barcode']}")
+                        print(f"Price: {item['price']}")
+                        print(f"Stock: {item['stock']}")
+                        print("-" * 30)
+
+            else:
+                print("Unable to retrieve inventory from the Flask API.")
+
             input("\nPress Enter to return to the menu...")
 
         elif choice == "3":
+            print("\n===== VIEW INVENTORY ITEM =====")
+
             item_id = input("Enter the inventory item ID: ")
 
             try:
                 item_id = int(item_id)
             except ValueError:
                 print("Invalid ID. Please enter a number.")
+                input("\nPress Enter to return to the menu...")
                 continue
 
-            found_item = None
+            response = requests.get(
+                f"http://127.0.0.1:5000/inventory/{item_id}"
+            )
 
-            for item in inventory:
-                if item["id"] == item_id:
-                    found_item = item
-                    break
+            if response.status_code == 200:
+                item = response.json()
 
-            if found_item:
                 print("\n===== INVENTORY ITEM =====")
-                print(f"ID: {found_item['id']}")
-                print(f"Product: {found_item['product_name']}")
-                print(f"Brand: {found_item['brands']}")
-                print(f"Barcode: {found_item['barcode']}")
-                print(f"Ingredients: {found_item['ingredients_text']}")
-                print(f"Price: {found_item['price']}")
-                print(f"Stock: {found_item['stock']}")
-            else:
+                print(f"ID: {item['id']}")
+                print(f"Product: {item['product_name']}")
+                print(f"Brand: {item['brands']}")
+                print(f"Barcode: {item['barcode']}")
+                print(f"Ingredients: {item['ingredients_text']}")
+                print(f"Price: {item['price']}")
+                print(f"Stock: {item['stock']}")
+
+            elif response.status_code == 404:
                 print("Item not found.")
+
+            else:
+                print("Unable to retrieve the inventory item.")
+
             input("\nPress Enter to return to the menu...")
 
         elif choice == "4":
@@ -111,39 +138,76 @@ def main():
                 input("\nPress Enter to return to the menu...")
                 continue
 
-            found_item = None
+    
+            response = requests.get(
+                f"http://127.0.0.1:5000/inventory/{item_id}"
+            )
 
-            for item in inventory:
-                if item["id"] == item_id:
-                    found_item = item
-                    break
-
-            if not found_item:
+            if response.status_code == 404:
                 print("Item not found.")
                 input("\nPress Enter to return to the menu...")
                 continue
 
-            print(f"\nUpdating: {found_item['product_name']}")
-
-            new_price = input(f"Enter new price (current: {found_item['price']}): ")
-            new_stock = input(f"Enter new stock (current: {found_item['stock']}): ")
-
-            try:
-                if new_price:
-                    found_item["price"] = float(new_price)
-
-                if new_stock:
-                    found_item["stock"] = int(new_stock)
-
-            except ValueError:
-                print("Price must be a number and stock must be a whole number.")
+            if response.status_code != 200:
+                print("Unable to retrieve item.")
                 input("\nPress Enter to return to the menu...")
                 continue
 
-            print("\nItem updated successfully!")
+            item = response.json()
+            print(f"\nProduct: {item['product_name']}")
+            print()
 
-            print(f"Price: {found_item['price']}")
-            print(f"Stock: {found_item['stock']}")
+           
+
+            new_price = input(
+                f"Enter new price (current: {item['price']}): "
+            )
+            new_stock = input(
+                f"Enter new stock (current:{item['stock']}): ")
+
+            update_data = {}
+
+            if new_price:
+                try:
+                    update_data["price"] = float(new_price)
+                except ValueError:
+                    print("Price must be a number.")
+                    input("\nPress Enter to return to the menu...")
+                    continue
+
+            if new_stock:
+                try:
+                    update_data["stock"] = int(new_stock)
+                except ValueError:
+                    print("Stock must be a whole number.")
+                    input("\nPress Enter to return to the menu...")
+                    continue
+
+            if not update_data:
+                print("No changes were entered.")
+                input("\nPress Enter to return to the menu...")
+                continue
+
+            response = requests.patch(
+                f"http://127.0.0.1:5000/inventory/{item_id}",
+                json=update_data
+            )
+
+            if response.status_code == 200:
+                item = response.json()
+
+                print("\nItem updated successfully!")
+                print(f"Product: {item['product_name']}")
+                print(f"Price: {item['price']}")
+                print(f"Stock: {item['stock']}")
+
+            elif response.status_code == 404:
+                print("Item not found.")
+
+            else:
+                print("Unable to update item.")
+                print(f"Status code: {response.status_code}")
+                print(f"Response: {response.text}")
 
             input("\nPress Enter to return to the menu...")
 
@@ -159,27 +223,48 @@ def main():
                 input("\nPress Enter to return to the menu...")
                 continue
 
-            found_item = None
+    
+            response = requests.get(
+                f"http://127.0.0.1:5000/inventory/{item_id}"
+            )
 
-            for item in inventory:
-                if item["id"] == item_id:
-                    found_item = item
-                    break
-
-            if not found_item:
+            if response.status_code == 404:
                 print("Item not found.")
                 input("\nPress Enter to return to the menu...")
                 continue
 
-            print(f"\nYou are about to delete: {found_item['product_name']}")
+            if response.status_code != 200:
+                print("Unable to retrieve item.")
+                input("\nPress Enter to return to the menu...")
+                continue
 
-            confirmation = input("Are you sure? (y/n): ").lower()
+            item = response.json()
 
-            if confirmation == "y":
-                inventory.remove(found_item)
-                print("Item deleted successfully!")
+            print(f"\nProduct: {item['product_name']}")
+            print(f"Price: {item['price']}")
+            print(f"Stock: {item['stock']}")
+
+            confirm = input("\nAre you sure you want to delete this item? (y/n): ")
+
+            if confirm.lower() != "y":
+             print("Delete cancelled.")
+             input("\nPress Enter to return to the menu...")
+             continue
+
+            response = requests.delete(
+                f"http://127.0.0.1:5000/inventory/{item_id}"
+            )
+
+            if response.status_code == 200:
+                print("\nItem deleted successfully!")
+
+            elif response.status_code == 404:
+             print("Item not found.")
+
             else:
-                print("Delete cancelled.")
+                print("Unable to delete item.")
+                print(f"Status code: {response.status_code}")
+                print(f"Response: {response.text}")
 
             input("\nPress Enter to return to the menu...")
 
